@@ -6,6 +6,50 @@
 Craftls is a fork of the Rustls library with customizable ClientHello fingerprint.
 </p>
 
+# ⚠️ WASM-Compatible Fork
+
+**This fork has been updated to support WebAssembly (WASM) environments** by making the crypto provider pluggable. Unlike the original craftls (based on rustls 0.22), this version allows you to use pure-Rust crypto backends like [`rustls-rustcrypto`](https://github.com/RustCrypto/rustls-rustcrypto) that work in WASM.
+
+## Key Changes from Original Craftls
+
+- **Pluggable CryptoProvider**: No longer hardcoded to `ring` or `aws-lc-rs`
+- **WASM Support**: Can be compiled to `wasm32-unknown-unknown` with appropriate crypto provider
+- **Optional Features**: `ring`, `aws_lc_rs`, and `compression` are now optional features
+
+## WASM Usage
+
+```rust
+use rustls_rustcrypto::provider as rustcrypto_provider;
+
+let config = rustls::ClientConfig::builder_with_provider(
+    rustcrypto_provider().into()
+)
+.with_safe_default_protocol_versions()
+.unwrap()
+.with_root_certificates(root_store)
+.with_no_client_auth()
+.with_fingerprint(
+    rustls::craft::CHROME_108.builder()
+);
+```
+
+## Feature Flags
+
+- `ring` - Use ring as the crypto provider (not WASM compatible)
+- `aws_lc_rs` - Use aws-lc-rs as the crypto provider (not WASM compatible)
+- `compression` - Enable certificate compression (brotli, zlib, zstd)
+- `tls12` - Enable TLS 1.2 support (enabled by default)
+- `wasm` - Enable WASM-specific features (getrandom/js)
+
+For WASM builds, use:
+```toml
+[dependencies]
+craftls = { version = "0.0.3", default-features = false, features = ["tls12", "wasm"] }
+rustls-rustcrypto = "0.0.2-alpha"
+```
+
+---
+
 # Status
 
 Craftls is under active development. We aim to maintain

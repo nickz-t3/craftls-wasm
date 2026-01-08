@@ -1,6 +1,7 @@
 #![allow(missing_docs)]
 
 use super::*;
+use once_cell::sync::Lazy;
 use paste::paste;
 
 macro_rules! define_fingerprint {
@@ -13,8 +14,7 @@ macro_rules! define_fingerprint {
     ($fingerprint_name:ident, $extensions:expr, $shuffle_extensions:expr, $cipher:expr) => {
         paste! {
             #[allow(non_camel_case_types)]
-            #[dynamic]
-            static [<$fingerprint_name _EXT_NO_ALPN>]: Vec<ExtensionSpec> = {
+            static [<$fingerprint_name _EXT_NO_ALPN>]: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {
                 use ExtensionSpec::*;
                 ($extensions)
                     .iter()
@@ -24,11 +24,10 @@ macro_rules! define_fingerprint {
                     })
                     .map(|v| v.clone())
                     .collect()
-            };
+            });
 
             #[allow(non_camel_case_types)]
-            #[dynamic]
-            static [<$fingerprint_name _EXT_ALPN_HTTP1>]: Vec<ExtensionSpec> = {
+            static [<$fingerprint_name _EXT_ALPN_HTTP1>]: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {
                 use ExtensionSpec::*;
                 ($extensions)
                     .iter()
@@ -37,21 +36,20 @@ macro_rules! define_fingerprint {
                         v => v.clone(),
                     })
                     .collect()
-            };
+            });
 
             #[allow(non_camel_case_types)]
-            #[dynamic]
             /// Represents a set of [`Fingerprint`] configurations, each tailored for different ALPN extensions.
             ///
             /// Variants:
             /// - `main`: The default configuration for HTTP/2 (h2) clients, designed to emulate typical browser behavior.
             /// - `test_alpn_http1`: A configuration for testing HTTP/1 clients, with appropriate ALPN settings.
             /// - `test_no_alpn`: A configuration for testing clients that do not use ALPN, including HTTP/1 or non-HTTP clients.
-            pub static $fingerprint_name: FingerprintSet = FingerprintSet {
+            pub static $fingerprint_name: Lazy<FingerprintSet> = Lazy::new(|| FingerprintSet {
                 main: Fingerprint { extensions: $extensions, cipher: $cipher, shuffle_extensions: $shuffle_extensions },
                 test_alpn_http1: Fingerprint { extensions: &[<$fingerprint_name _EXT_ALPN_HTTP1>], cipher: $cipher, shuffle_extensions: $shuffle_extensions },
                 test_no_alpn: Fingerprint { extensions: &[<$fingerprint_name _EXT_NO_ALPN>], cipher: $cipher, shuffle_extensions: $shuffle_extensions },
-            };
+            });
         }
     };
 }
@@ -64,11 +62,11 @@ macro_rules! static_ref {
 }
 
 /// The default ocsp request of browsers
-pub static OCSP_REQ: CertificateStatusRequest =
-    CertificateStatusRequest::Ocsp(OcspCertificateStatusRequest {
+pub static OCSP_REQ: Lazy<CertificateStatusRequest> =
+    Lazy::new(|| CertificateStatusRequest::Ocsp(OcspCertificateStatusRequest {
         responder_ids: vec![],
         extensions: PayloadU16(vec![]),
-    });
+    }));
 
 /// The signature algorithms of chrome 108
 pub static CHROME_108_SIGNATURE_ALGO: &[SignatureScheme] = &[
@@ -82,13 +80,12 @@ pub static CHROME_108_SIGNATURE_ALGO: &[SignatureScheme] = &[
     SignatureScheme::RSA_PKCS1_SHA512,
 ];
 
-pub static DEFAULT_RUSTLS_SESSION_TICKET: ClientExtension = ClientExtension::SessionTicket(
+pub static DEFAULT_RUSTLS_SESSION_TICKET: Lazy<ClientExtension> = Lazy::new(|| ClientExtension::SessionTicket(
     crate::msgs::handshake::ClientSessionTicket::Offer(Payload(vec![])),
-);
+));
 
-#[dynamic]
 /// The extension list of chrome 108
-pub static CHROME_108_EXT: Vec<ExtensionSpec> = {
+pub static CHROME_108_EXT: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {
     use ExtensionSpec::*;
     use KeepExtension::*;
     vec![
@@ -144,11 +141,10 @@ pub static CHROME_108_EXT: Vec<ExtensionSpec> = {
         Craft(CraftExtension::Padding),
         Keep(Optional(ExtensionType::PreSharedKey)),
     ]
-};
+});
 
-#[dynamic]
-/// The extension list of chrome 108
-pub(crate) static EXT_TEST: Vec<ExtensionSpec> = {
+/// The extension list of chrome 108 (test version)
+pub(crate) static EXT_TEST: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {
     use ExtensionSpec::*;
     use KeepExtension::*;
     vec![
@@ -215,13 +211,12 @@ pub(crate) static EXT_TEST: Vec<ExtensionSpec> = {
         // Craft(CraftExtension::Padding),
         Keep(Optional(ExtensionType::PreSharedKey)),
     ]
-};
+});
 
 /// The cipher list of chrome 108
 ///
 /// This list includes \*CBC* and \*TLS_RSA* ciphers for correctness, even though they are not supported by Rustls due to security concerns and deprecation. As these older cipher suites are seldom used in modern secure communications, their absence in Rustls is unlikely to cause compatibility issues.
-#[dynamic]
-pub static CHROME_CIPHER: Vec<GreaseOrCipher> = {
+pub static CHROME_CIPHER: Lazy<Vec<GreaseOrCipher>> = Lazy::new(|| {
     use CipherSuite::*;
     vec![
         GreaseOrCipher::Grease,
@@ -241,7 +236,7 @@ pub static CHROME_CIPHER: Vec<GreaseOrCipher> = {
         TLS_RSA_WITH_AES_128_CBC_SHA.into(),
         TLS_RSA_WITH_AES_256_CBC_SHA.into(),
     ]
-};
+});
 
 define_fingerprint!(CHROME_108 { &CHROME_108_EXT, &CHROME_CIPHER });
 define_fingerprint!(CHROME_112 { shuffle(&CHROME_108_EXT), &CHROME_CIPHER });
@@ -250,8 +245,7 @@ define_fingerprint!(RUSTLS_TEST { &EXT_TEST, &CHROME_CIPHER });
 /// The cipher list of Safari 17.1
 ///
 /// This list includes \*CBC* and \*TLS_RSA* ciphers for correctness, even though they are not supported by Rustls due to security concerns and deprecation. As these older cipher suites are seldom used in modern secure communications, their absence in Rustls is unlikely to cause compatibility issues.
-#[dynamic]
-pub static SAFARI_17_1_CIPHERS: Vec<GreaseOrCipher> = {
+pub static SAFARI_17_1_CIPHERS: Lazy<Vec<GreaseOrCipher>> = Lazy::new(|| {
     use CipherSuite::*;
     vec![
         GreaseOrCipher::Grease,
@@ -276,7 +270,7 @@ pub static SAFARI_17_1_CIPHERS: Vec<GreaseOrCipher> = {
         TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA.into(),
         TLS_RSA_WITH_3DES_EDE_CBC_SHA.into(),
     ]
-};
+});
 
 /// The signature algorithm list of Safari 17.1
 pub static SAFARI_17_1_SIGNATURE_ALGO: &[SignatureScheme] = &[
@@ -294,8 +288,7 @@ pub static SAFARI_17_1_SIGNATURE_ALGO: &[SignatureScheme] = &[
 ];
 
 /// The extension list of Safari 17.1
-#[dynamic]
-pub static SAFARI_17_1_EXT: Vec<ExtensionSpec> = {
+pub static SAFARI_17_1_EXT: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {
     use ExtensionSpec::*;
     use KeepExtension::*;
     vec![
@@ -346,15 +339,14 @@ pub static SAFARI_17_1_EXT: Vec<ExtensionSpec> = {
         Craft(CraftExtension::Grease2),
         Craft(CraftExtension::Padding),
     ]
-};
+});
 
 define_fingerprint!(SAFARI_17_1 { &SAFARI_17_1_EXT, &SAFARI_17_1_CIPHERS });
 
 /// The cipher list of firefox 105
 ///
 /// This list includes \*CBC* and \*TLS_RSA* ciphers for correctness, even though they are not supported by Rustls due to security concerns and deprecation. As these older cipher suites are seldom used in modern secure communications, their absence in Rustls is unlikely to cause compatibility issues.
-#[dynamic]
-pub static FIREFOX_105_CIPHERS: Vec<GreaseOrCipher> = {
+pub static FIREFOX_105_CIPHERS: Lazy<Vec<GreaseOrCipher>> = Lazy::new(|| {
     use CipherSuite::*;
     vec![
         TLS13_AES_128_GCM_SHA256.into(),
@@ -375,7 +367,7 @@ pub static FIREFOX_105_CIPHERS: Vec<GreaseOrCipher> = {
         TLS_RSA_WITH_AES_128_CBC_SHA.into(),
         TLS_RSA_WITH_AES_256_CBC_SHA.into(),
     ]
-};
+});
 
 /// The signature algorithm list of firefox 105
 pub static FIREFOX_105_SIGNATURE_ALGO: &[SignatureScheme] = &[
@@ -393,8 +385,7 @@ pub static FIREFOX_105_SIGNATURE_ALGO: &[SignatureScheme] = &[
 ];
 
 /// The extension list of firefox 105
-#[dynamic]
-pub static FIREFOX_105_EXT: Vec<ExtensionSpec> = {
+pub static FIREFOX_105_EXT: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {
     use ExtensionSpec::*;
     use KeepExtension::*;
     vec![
@@ -447,6 +438,6 @@ pub static FIREFOX_105_EXT: Vec<ExtensionSpec> = {
         Craft(CraftExtension::Padding),
         Keep(Optional(ExtensionType::PreSharedKey)),
     ]
-};
+});
 
 define_fingerprint!(FIREFOX_105 { &FIREFOX_105_EXT, &FIREFOX_105_CIPHERS });

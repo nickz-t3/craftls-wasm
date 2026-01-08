@@ -2,12 +2,19 @@
 
 use crate::msgs::enums::CertificateCompressionAlgorithm;
 use alloc::vec::Vec;
-use brotli::DecompressorWriter;
-use brotli::{enc::BrotliEncoderParams, CompressorWriter};
 use core::fmt::Debug;
+use std::io::Result;
+
+#[cfg(feature = "compression")]
+use brotli::DecompressorWriter;
+#[cfg(feature = "compression")]
+use brotli::{enc::BrotliEncoderParams, CompressorWriter};
+#[cfg(feature = "compression")]
 use flate2::read::ZlibDecoder;
+#[cfg(feature = "compression")]
 use flate2::write::ZlibEncoder;
-use std::io::{Read, Result, Write};
+#[cfg(feature = "compression")]
+use std::io::{Read, Write};
 
 /// A certificate compression algorithm described
 /// as a pair of compression and decompression
@@ -21,44 +28,47 @@ pub struct CertificateCompression {
     pub provider: &'static dyn CompressionProvider,
 }
 
-/// todo
+/// Trait for certificate compression/decompression providers
 pub trait CompressionProvider: Send + Sync + Debug {
-    /// todo
+    /// Compress the input bytes and write to the writer
     fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>>;
-    /// todo
+    /// Decompress the input bytes and write to the writer
     fn decompress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>>;
 }
 
-/// todo
-#[derive(Debug)]
-pub struct BrotliParams {
-    /// todo
-    pub buffer_size: usize,
-    /// todo
-    pub params: BrotliEncoderParams,
-}
-
-impl CompressionProvider for BrotliParams {
-    fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
-        let mut compressor = CompressorWriter::with_params(writer, self.buffer_size, &self.params);
-        compressor.write_all(input)?;
-        compressor.flush()?;
-        Ok(compressor.into_inner())
-    }
-
-    fn decompress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
-        let mut decompressor = DecompressorWriter::new(writer, self.buffer_size);
-        decompressor.write_all(input)?;
-        decompressor.flush()?;
-        decompressor
-            .into_inner()
-            .map_err(|_| std::io::ErrorKind::InvalidData.into())
-    }
-}
-
-/// todo
-mod compression_params {
+#[cfg(feature = "compression")]
+mod compression_impl {
+    use super::*;
     use brotli::enc::BrotliEncoderParams;
+    use std::io::{Read, Write};
+
+    /// Brotli compression parameters
+    #[derive(Debug)]
+    pub struct BrotliParams {
+        /// Buffer size for compression
+        pub buffer_size: usize,
+        /// Brotli encoder parameters
+        pub params: BrotliEncoderParams,
+    }
+
+    impl CompressionProvider for BrotliParams {
+        fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
+            let mut compressor =
+                CompressorWriter::with_params(writer, self.buffer_size, &self.params);
+            compressor.write_all(input)?;
+            compressor.flush()?;
+            Ok(compressor.into_inner())
+        }
+
+        fn decompress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
+            let mut decompressor = DecompressorWriter::new(writer, self.buffer_size);
+            decompressor.write_all(input)?;
+            decompressor.flush()?;
+            decompressor
+                .into_inner()
+                .map_err(|_| std::io::ErrorKind::InvalidData.into())
+        }
+    }
 
     #[allow(non_snake_case)]
     const fn BROTLI_DISTANCE_ALPHABET_SIZE(NPOSTFIX: u32, NDIRECT: u32, MAXNBITS: u32) -> u32 {
@@ -122,74 +132,79 @@ mod compression_params {
             format!("{:?}", flate2::Compression::default())
         );
     }
-}
 
-/// todo
-pub static BROTLI_DEFAULT: &CertificateCompression = &CertificateCompression {
-    alg: CertificateCompressionAlgorithm::Brotli,
-    provider: &BrotliParams {
-        buffer_size: 4096,
-        params: compression_params::BROTLI_ENCODER_DEFAULT,
-    },
-};
+    /// Brotli compression with default parameters
+    pub static BROTLI_DEFAULT: &CertificateCompression = &CertificateCompression {
+        alg: CertificateCompressionAlgorithm::Brotli,
+        provider: &BrotliParams {
+            buffer_size: 4096,
+            params: BROTLI_ENCODER_DEFAULT,
+        },
+    };
 
-#[derive(Debug)]
-/// todo
-pub struct ZlibParams {
-    /// Must between 0-9 (inclusive)
-    pub compression_level: flate2::Compression,
-}
-
-impl CompressionProvider for ZlibParams {
-    fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
-        let mut compressor = ZlibEncoder::new(writer, self.compression_level);
-        compressor.write_all(input)?;
-        compressor.flush()?;
-        compressor.finish()
+    /// Zlib compression parameters
+    #[derive(Debug)]
+    pub struct ZlibParams {
+        /// Compression level (0-9 inclusive)
+        pub compression_level: flate2::Compression,
     }
 
-    fn decompress(&self, mut writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
-        let mut decompressor = ZlibDecoder::new(input);
+    impl CompressionProvider for ZlibParams {
+        fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
+            let mut compressor = ZlibEncoder::new(writer, self.compression_level);
+            compressor.write_all(input)?;
+            compressor.flush()?;
+            compressor.finish()
+        }
 
-        decompressor.read_to_end(&mut writer)?;
-        Ok(writer)
-    }
-}
+        fn decompress(&self, mut writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
+            let mut decompressor = ZlibDecoder::new(input);
 
-/// todo
-pub static ZLIB_DEFAULT: &CertificateCompression = &CertificateCompression {
-    alg: CertificateCompressionAlgorithm::Zlib,
-    provider: &ZlibParams {
-        compression_level: compression_params::ZLIB_ENCODER_DEFAULT,
-    },
-};
-
-#[derive(Debug)]
-/// todo
-pub struct ZstdParams {
-    /// todo
-    pub compression_level: u32,
-}
-
-impl CompressionProvider for ZstdParams {
-    fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
-        let mut compressor = zstd::Encoder::new(writer, self.compression_level as i32)?;
-        compressor.write_all(input)?;
-        compressor.flush()?;
-        compressor.finish()
+            decompressor.read_to_end(&mut writer)?;
+            Ok(writer)
+        }
     }
 
-    fn decompress(&self, mut writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
-        let mut decompressor = zstd::Decoder::new(input)?;
-        decompressor.read_to_end(&mut writer)?;
-        Ok(writer)
+    /// Zlib compression with default parameters
+    pub static ZLIB_DEFAULT: &CertificateCompression = &CertificateCompression {
+        alg: CertificateCompressionAlgorithm::Zlib,
+        provider: &ZlibParams {
+            compression_level: ZLIB_ENCODER_DEFAULT,
+        },
+    };
+
+    /// Zstd compression parameters
+    #[derive(Debug)]
+    pub struct ZstdParams {
+        /// Compression level
+        pub compression_level: u32,
     }
+
+    impl CompressionProvider for ZstdParams {
+        fn compress(&self, writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
+            let mut compressor = zstd::Encoder::new(writer, self.compression_level as i32)?;
+            compressor.write_all(input)?;
+            compressor.flush()?;
+            compressor.finish()
+        }
+
+        fn decompress(&self, mut writer: Vec<u8>, input: &[u8]) -> Result<Vec<u8>> {
+            let mut decompressor = zstd::Decoder::new(input)?;
+            decompressor.read_to_end(&mut writer)?;
+            Ok(writer)
+        }
+    }
+
+    /// Zstd compression with default parameters
+    pub static ZSTD_DEFAULT: &CertificateCompression = &CertificateCompression {
+        alg: CertificateCompressionAlgorithm::Zstd,
+        provider: &ZstdParams {
+            compression_level: zstd::DEFAULT_COMPRESSION_LEVEL as u32,
+        },
+    };
 }
 
-/// todo
-pub static ZSTD_DEFAULT: &CertificateCompression = &CertificateCompression {
-    alg: CertificateCompressionAlgorithm::Zstd,
-    provider: &ZstdParams {
-        compression_level: zstd::DEFAULT_COMPRESSION_LEVEL as u32,
-    },
+#[cfg(feature = "compression")]
+pub use compression_impl::{
+    BrotliParams, ZlibParams, ZstdParams, BROTLI_DEFAULT, ZLIB_DEFAULT, ZSTD_DEFAULT,
 };

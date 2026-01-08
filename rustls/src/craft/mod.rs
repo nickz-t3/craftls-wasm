@@ -1,10 +1,9 @@
 mod fingerprints;
 pub use fingerprints::*;
-use rand::{thread_rng, Rng};
 
 use crate::client::ClientConnectionData;
 use crate::common_state::Context;
-use crate::crypto::{ActiveKeyExchange, SupportedKxGroup};
+use crate::crypto::{ActiveKeyExchange, SecureRandom, SupportedKxGroup};
 use crate::msgs::base::{Payload, PayloadU16};
 use crate::msgs::codec::{Codec, LengthPrefixedBuffer};
 use crate::msgs::enums::{ECPointFormat, ExtensionType, PSKKeyExchangeMode};
@@ -17,13 +16,12 @@ use crate::versions::EnabledVersions;
 use crate::{
     CipherSuite, ClientConfig, Error, NamedGroup, ProtocolVersion, SignatureScheme, ALL_VERSIONS,
 };
+use alloc::boxed::Box;
 use alloc::sync::Arc;
+use alloc::vec;
+use alloc::vec::Vec;
 use core::fmt::Debug;
-use std::boxed::Box;
-use std::vec;
-use std::{collections::HashMap, vec::Vec};
-
-use static_init::dynamic;
+use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default)]
 pub(crate) struct CraftOptions(Option<FingerprintBuilder>);
@@ -99,10 +97,21 @@ impl Debug for CraftConnectionData {
 }
 
 impl CraftConnectionData {
-    pub(crate) fn new() -> Self {
+    /// Create new CraftConnectionData using the provided SecureRandom for GREASE seed generation.
+    /// This is WASM-compatible as it uses the CryptoProvider's SecureRandom.
+    pub(crate) fn new(secure_random: &dyn SecureRandom) -> Self {
         use BoringSslGreaseIndex::*;
         let mut grease_seed = [0u16; NumOfGrease as usize];
-        thread_rng().fill(&mut grease_seed);
+
+        // Fill grease_seed using SecureRandom (WASM compatible)
+        let mut random_bytes = [0u8; NumOfGrease as usize * 2];
+        // If random generation fails, use a deterministic fallback (less secure but functional)
+        if secure_random.fill(&mut random_bytes).is_ok() {
+            for (i, chunk) in random_bytes.chunks(2).enumerate() {
+                grease_seed[i] = u16::from_be_bytes([chunk[0], chunk[1]]);
+            }
+        }
+
         for seed in grease_seed.iter_mut() {
             let unit = (*seed & 0xf0u16) | 0x0au16;
             *seed = unit << 8 | unit;
@@ -910,6 +919,7 @@ impl FingerprintBuilder {
                         .map(|p| p.to_vec())
                         .collect();
                 }
+                #[cfg(feature = "compression")]
                 ExtensionSpec::Craft(CraftExtension::CompressCert(algos)) => {
                     if !self.override_cert_compress {
                         continue;
@@ -923,6 +933,10 @@ impl FingerprintBuilder {
                             crate::CertificateCompressionAlgorithm::Unknown(_) => unimplemented!(),
                         })
                         .collect();
+                }
+                #[cfg(not(feature = "compression"))]
+                ExtensionSpec::Craft(CraftExtension::CompressCert(_)) => {
+                    // Compression not available without the compression feature
                 }
                 _ => (),
             }

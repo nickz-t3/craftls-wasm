@@ -667,7 +667,7 @@ impl ConnectionCore<ClientConnectionData> {
         common_state.set_max_fragment_size(config.max_fragment_size)?;
         common_state.protocol = proto;
         common_state.enable_secret_extraction = config.enable_secret_extraction;
-        let mut data = ClientConnectionData::new();
+        let mut data = ClientConnectionData::new(config.provider.secure_random);
 
         let mut cx = hs::ClientContext {
             common: &mut common_state,
@@ -694,11 +694,11 @@ pub struct ClientConnectionData {
 }
 
 impl ClientConnectionData {
-    fn new() -> Self {
+    fn new(secure_random: &dyn crate::crypto::SecureRandom) -> Self {
         Self {
             early_data: EarlyData::new(),
             resumption_ciphersuite: None,
-            craft_connection_data: crate::craft::CraftConnectionData::new(),
+            craft_connection_data: crate::craft::CraftConnectionData::new(secure_random),
         }
     }
 }
