@@ -1,6 +1,6 @@
 [package]
-name = "craftls"
-version = "0.0.3+rustls.0.23.0"
+name = "rustls"  # Changed from "craftls" to "rustls"
+version = "0.23.0"  # Match the rustls version for patching
 edition = "2021"
 rust-version = "1.66"
 license = "Apache-2.0 OR ISC OR MIT"
