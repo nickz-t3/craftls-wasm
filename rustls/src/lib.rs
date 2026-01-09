@@ -432,6 +432,12 @@ use crate::crypto::aws_lc_rs as test_provider;
 use crate::crypto::ring as test_provider;
 
 // The public interface is:
+
+/// Re-export pki_types for convenience (matches standard rustls 0.23 API)
+pub mod pki_types {
+    pub use pki_types::*;
+}
+
 pub use crate::builder::{ConfigBuilder, ConfigSide, WantsVerifier, WantsVersions};
 pub use crate::common_state::{CommonState, IoState, Side};
 pub use crate::conn::{Connection, ConnectionCommon, Reader, SideData, Writer};
@@ -553,6 +559,9 @@ pub mod ticketer;
 
 /// This is the rustls manual.
 pub mod manual;
+
+/// The library's source of time.
+pub mod time_provider;
 
 /// Core craft functionality
 pub mod craft;

@@ -106,7 +106,10 @@ impl CraftConnectionData {
         // Fill grease_seed using SecureRandom (WASM compatible)
         let mut random_bytes = [0u8; NumOfGrease as usize * 2];
         // If random generation fails, use a deterministic fallback (less secure but functional)
-        if secure_random.fill(&mut random_bytes).is_ok() {
+        if secure_random
+            .fill(&mut random_bytes)
+            .is_ok()
+        {
             for (i, chunk) in random_bytes.chunks(2).enumerate() {
                 grease_seed[i] = u16::from_be_bytes([chunk[0], chunk[1]]);
             }

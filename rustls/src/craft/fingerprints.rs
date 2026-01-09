@@ -62,11 +62,12 @@ macro_rules! static_ref {
 }
 
 /// The default ocsp request of browsers
-pub static OCSP_REQ: Lazy<CertificateStatusRequest> =
-    Lazy::new(|| CertificateStatusRequest::Ocsp(OcspCertificateStatusRequest {
+pub static OCSP_REQ: Lazy<CertificateStatusRequest> = Lazy::new(|| {
+    CertificateStatusRequest::Ocsp(OcspCertificateStatusRequest {
         responder_ids: vec![],
         extensions: PayloadU16(vec![]),
-    }));
+    })
+});
 
 /// The signature algorithms of chrome 108
 pub static CHROME_108_SIGNATURE_ALGO: &[SignatureScheme] = &[
@@ -80,9 +81,11 @@ pub static CHROME_108_SIGNATURE_ALGO: &[SignatureScheme] = &[
     SignatureScheme::RSA_PKCS1_SHA512,
 ];
 
-pub static DEFAULT_RUSTLS_SESSION_TICKET: Lazy<ClientExtension> = Lazy::new(|| ClientExtension::SessionTicket(
-    crate::msgs::handshake::ClientSessionTicket::Offer(Payload(vec![])),
-));
+pub static DEFAULT_RUSTLS_SESSION_TICKET: Lazy<ClientExtension> = Lazy::new(|| {
+    ClientExtension::SessionTicket(crate::msgs::handshake::ClientSessionTicket::Offer(Payload(
+        vec![],
+    )))
+});
 
 /// The extension list of chrome 108
 pub static CHROME_108_EXT: Lazy<Vec<ExtensionSpec>> = Lazy::new(|| {

@@ -42,6 +42,7 @@ let config = rustls::ClientConfig::builder_with_provider(
 - `wasm` - Enable WASM-specific features (getrandom/js)
 
 For WASM builds, use:
+
 ```toml
 [dependencies]
 craftls = { version = "0.0.3", default-features = false, features = ["tls12", "wasm"] }
@@ -71,22 +72,22 @@ https://docs.rs/craftls/
 
 ## Current functionality (with default crate features)
 
-* Capabilities inherited from [Rustls](https://github.com/rustls/rustls?tab=readme-ov-file#current-functionality-with-default-crate-features)
-* Customization options for `ClientHello` extensions
-* Customization options for `ClientHello` cipher suites.
-* Support for client-side Certificate Compression using `zlib`, `zstd`, and `brotli` compression methods ([rfc8879](https://datatracker.ietf.org/doc/html/rfc8879)).
-* ClientHello padding extension ([rfc7685](https://datatracker.ietf.org/doc/html/rfc7685)).
-* Grease extension ([rfc8701](https://datatracker.ietf.org/doc/html/rfc8701))
-* TLS ClientHello extension permutation ([chrome](https://chromestatus.com/feature/5124606246518784))
-* Predefined browser fingerprints
-  * `CHROME_108`
-  * `CHROME_112`
-  * `SAFARI_17_1`
-  * `FIREFOX_105`
+- Capabilities inherited from [Rustls](https://github.com/rustls/rustls?tab=readme-ov-file#current-functionality-with-default-crate-features)
+- Customization options for `ClientHello` extensions
+- Customization options for `ClientHello` cipher suites.
+- Support for client-side Certificate Compression using `zlib`, `zstd`, and `brotli` compression methods ([rfc8879](https://datatracker.ietf.org/doc/html/rfc8879)).
+- ClientHello padding extension ([rfc7685](https://datatracker.ietf.org/doc/html/rfc7685)).
+- Grease extension ([rfc8701](https://datatracker.ietf.org/doc/html/rfc8701))
+- TLS ClientHello extension permutation ([chrome](https://chromestatus.com/feature/5124606246518784))
+- Predefined browser fingerprints
+  - `CHROME_108`
+  - `CHROME_112`
+  - `SAFARI_17_1`
+  - `FIREFOX_105`
 
 ## Non-features
 
-We will not be supporting any non-features listed in [Rustls README](https://github.com/rustls/rustls?tab=readme-ov-file#non-features), including deprecated TLS versions and outdated cipher suites. 
+We will not be supporting any non-features listed in [Rustls README](https://github.com/rustls/rustls?tab=readme-ov-file#non-features), including deprecated TLS versions and outdated cipher suites.
 
 While these non-features may be included in browser fingerprints for completeness, any server attempt to use them will result in the termination of the connection. Most modern and secure servers do not utilize these outdated options, so this measure should not impact regular use.
 
@@ -179,7 +180,7 @@ Craftls is distributed under the following three licenses:
 - ISC license.
 
 These are included as LICENSE-APACHE, LICENSE-MIT and LICENSE-ISC
-respectively.  You may use this software under the terms of any
+respectively. You may use this software under the terms of any
 of these licenses, at your option.
 
 # Code of conduct
