@@ -16,31 +16,31 @@ build = "build.rs"
 name = "rustls"
 
 [build-dependencies]
-rustversion = { version = "1.0.6", optional = true }
+rustversion = { version = "1.0.22", optional = true }
 
 [dependencies]
 # Optional native crypto providers (not WASM compatible)
-aws-lc-rs = { version = "1.5", optional = true }
+aws-lc-rs = { version = "1.13", optional = true }
 ring = { version = "0.17", optional = true }
 
 # Core dependencies
-log = { version = "0.4.4", optional = true }
-subtle = { version = "2.5.0", default-features = false }
+log = { version = "0.4.29", optional = true }
+subtle = { version = "2.6.1", default-features = false }
 webpki = { package = "rustls-webpki", version = "0.102", features = ["std"], default-features = false }
 pki-types = { package = "rustls-pki-types", version = "1", features = ["std"] }
-zeroize = "1.6.0"
+zeroize = "1.8.2"
 
 # Craft-specific dependencies
-once_cell = "1.18" #!craft! - WASM-compatible lazy initialization
-paste = "1.0.14" #!craft!
+once_cell = "1.21" #!craft! - WASM-compatible lazy initialization
+paste = "1.0.15" #!craft!
 rand = { version = "0.8.5", default-features = false } #!craft! - made no_std compatible
 getrandom = { version = "0.2", optional = true } #!craft! - for WASM random
 
 # Compression (optional for WASM)
-brotli = { version = "3.4.0", optional = true }
-flate2 = { version = "1.0.28", optional = true }
-zstd = { version = "0.12.3", optional = true }
-home = { version = "=0.5.5", optional = true } #!craft! to minimize MSRV
+brotli = { version = "8.0.2", optional = true }
+flate2 = { version = "1.1.9", optional = true }
+zstd = { version = "0.13.3", optional = true }
+home = { version = "=0.5.12", optional = true } #!craft! to minimize MSRV
 
 [features]
 # Default: no crypto provider, user must provide one (or use ring/aws_lc_rs features)
@@ -69,12 +69,12 @@ wasm = ["getrandom/js"]
 read_buf = ["rustversion"]
 
 [dev-dependencies]
-base64 = "0.21"
+base64 = "0.22"
 bencher = "0.1.5"
 env_logger = "0.10"
-log = "0.4.4"
+log = "0.4.29"
 rustls-pemfile = "2"
-webpki-roots = "0.26"
+webpki-roots = "1.0"
 
 [[example]]
 name = "bogo_shim"
